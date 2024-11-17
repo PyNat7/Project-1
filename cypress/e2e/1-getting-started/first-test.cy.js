@@ -1,67 +1,67 @@
 describe('Rozetka Notebook Tests', () => {
+  const notebookPageUrl = 'https://rozetka.com.ua/ua/notebooks/c80004/';
+  const availabilityText = 'Готовий до відправлення';
+  const notebookTitles = ['Acer', 'Lenovo'];
+  
   beforeEach(() => {
-    cy.visit('https://rozetka.com.ua/ua/notebooks/c80004/');
+    cy.visit(notebookPageUrl);
   });
 
-  it('displays available notebooks', () => {
-    const newItem = 'Готовий до відправлення';
-    cy.get('body').contains('ноутбуки').should('be.visible');
+  it('displays available notebooks and allows adding to cart', () => {
+    // Check if the "ноутбуки" section is visible
+    cy.contains('body', 'ноутбуки').should('be.visible');
 
-    cy.get('.goods-tile__title').contains('Acer').should('be.visible');
-    cy.get('.goods-tile__title').contains('Lenovo').should('be.visible');
+    // Check if Acer and Lenovo notebooks are listed
+    notebookTitles.forEach((brand) => {
+      cy.get('.goods-tile__title').contains(brand).should('be.visible');
+    });
+
+    // Check availability status and that the item can be added to the cart
     cy.get('.goods-tile__availability')
-      .should('contain.text', newItem)
+      .should('contain.text', availabilityText)
       .and('be.visible');
 
-    cy.get('.buy-button').eq(6).click(); // Click to add to cart
-
-    // Check that the button changes state after adding to the cart
-    cy.get('.buy-button', { timeout: 15000 })
+    // Add the 7th notebook to the cart and check button state
+    cy.scrollTo('top');
+    cy.get('.buy-button')
       .eq(6)
-      .should('have.class', 'buy-button_state_in_cart')
+      .trigger('mouseover')
+      .should('be.visible')
+      .click({ force: true });
+
+    // Verify the button state after adding to cart
+    cy.get('.buy-button', { timeout: 15000 })
+      .eq(0)
+      .should('have.class', 'goods-tile__price.price--red.ng-star-inserted > rz-buy-button > button')
       .then(($btn) => {
-        cy.log($btn.attr('class')); // Log the button's classes for debugging
+        cy.log($btn.attr('class'));
       });
   });
 
-  context('with a checked task', () => {
+  context('with a full cart', () => {
     beforeEach(() => {
-      cy.contains('Додати до кошика')
-        .parent()
-        .find('button')
-        .click(); // Click the add to cart button
-    });
-
-    it('can filter for uncompleted tasks', () => {
-      cy.contains('Active').click();
-
-      cy.get('.todo-list li')
-        .should('have.length', 1)
+      // Add the first notebook to the cart
+      cy.get('.goods-tile__inner')
         .first()
-        .should('have.text', 'Оформити замовлення');
-
-      cy.contains('Додати до кошика').should('not.exist');
+        .find('.buy-button')
+        .click({ force: true });
     });
 
-    it('can filter for completed tasks', () => {
-      cy.contains('Completed').click();
-
-      cy.get('.todo-list li')
-        .should('have.length', 1)
-        .first()
-        .should('have.text', 'Додати до кошика');
-
-      cy.contains('Walk the dog').should('not.exist');
-    });
-
-    it('can delete all completed tasks', () => {
-      cy.contains('Clear completed').click();
-
-      cy.get('.todo-list li')
-        .should('have.length', 1)
-        .should('not.have.text', 'Додати до кошика');
-
-      cy.contains('Clear completed').should('not.exist');
+    it('verifies that an item is added to the cart and submits the order', () => {
+      // Verify that the cart icon is updated and visible
+      cy.get('rz-icon-badge')
+        .should('have.attr', 'rz-icon-badge')
+        .and('be.visible');
+    
+      // Click the "Оформити замовлення" (Submit Order) button
+      cy.contains('Оформити замовлення')
+      .trigger(mouseover)
+      .click();
+    
+      // Submit the order by clicking the "Submit Order" button
+      cy.get('.cart-footer')
+        .find('a[data-testid="cart-receipt-submit-order"]')
+        .click();
     });
   });
 });
